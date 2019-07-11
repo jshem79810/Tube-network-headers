@@ -9,6 +9,7 @@
 
 #include <math.h>
 
+//class for storing and manipulating 3D vectors
 namespace pos
 {
 	template<typename T=double> class Position 

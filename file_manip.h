@@ -8,13 +8,15 @@
 #include <iostream>
 #include <vector>
 
-inline bool file_exists(const std::string &name)
+//inline functions for file operations
+
+inline bool file_exists(const std::string &name)   	//check if file exists
 {
 	struct stat buffer;   
 	return (stat (name.c_str(), &buffer) == 0); 
 }
 
-inline bool check_infile(const std::string &name)
+inline bool check_infile(const std::string &name)    //check if infile is valid
 {
 	std::ifstream file;
 	file.open(name);
@@ -22,11 +24,11 @@ inline bool check_infile(const std::string &name)
 	{
 		return false;
 	}
-	std::cout << "Error, could not read input " << name << " \n";    //check file
+	std::cout << "Error, could not read input " << name << " \n";    //error
 	return true;
 }
 
-inline bool check_outfile(const std::string &name)
+inline bool check_outfile(const std::string &name)   //check if outfile is valid
 {
 	std::ofstream file;
 	file.open(name);
@@ -38,7 +40,7 @@ inline bool check_outfile(const std::string &name)
 	return true;
 }
 
-inline size_t count_lines(const std::string &name)
+inline size_t count_lines(const std::string &name)   //count number of lines in file
 {
 	std::ifstream file;
 	file.open(name);
@@ -52,7 +54,7 @@ inline size_t count_lines(const std::string &name)
 	return count;
 }
 
-inline std::vector<std::string> get_all_lines(const std::string &name)
+inline std::vector<std::string> get_all_lines(const std::string &name)    //get all lines in file and return as vector of strings
 {
 	size_t Nlines = count_lines(name);
 	std::vector<std::string> output;
@@ -68,7 +70,7 @@ inline std::vector<std::string> get_all_lines(const std::string &name)
 }
 
 template <typename T>
-inline T StringToNumber(const std::string &Text)
+inline T StringToNumber(const std::string &Text)    //convert string to number
 {
 	std::istringstream ss(Text);
 	T result;
@@ -76,7 +78,7 @@ inline T StringToNumber(const std::string &Text)
 }
 
 template <typename T>
-inline std::vector<std::vector<T>> parse_csv_file(const std::string &name)
+inline std::vector<std::vector<T>> parse_csv_file(const std::string &name)    //parse csv file into vector of vectors of typename T
 {
 	std::ifstream file;
 	std::string s;
@@ -104,7 +106,7 @@ inline std::vector<std::vector<T>> parse_csv_file(const std::string &name)
 	return data;
 }
 
-inline std::vector<std::string> string_split(const std::string & str, const std::string & delim)
+inline std::vector<std::string> string_split(const std::string & str, const std::string & delim)   //split string by delimiter return as vector of strings
 {
     std::vector<std::string> tokens;
     size_t prev = 0, pos = 0;

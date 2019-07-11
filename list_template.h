@@ -9,9 +9,11 @@
 #include "file_manip.h"
 #include "globals.h"
 
+//classes for reading and storing options and parameters
+
 namespace inlist
 {
-	//template for options and params lists
+	//generic template for options and params lists
 	template <class T1, class T2>
 	class List
 	{
@@ -83,6 +85,7 @@ namespace inlist
 		return false;
 	}
 
+	//template for generic input, can be optino or parameter
 	template <typename T>
 	class Input{
 	protected:
@@ -112,6 +115,7 @@ namespace inlist
 		virtual std::string print(){return "Undefined";}
 	};
 
+	//option class
 	template <typename T>
 	class Option: public Input<T>{
 	public:
@@ -140,6 +144,7 @@ namespace inlist
 		void read(const std::string & code){};
 	};
 
+	//character option -- for multiple choice options
 	template<> void Option<char>::read(const std::string & code)
 	{
 			bool error = true;
@@ -157,6 +162,7 @@ namespace inlist
 			}
 	}
 
+	//boolian option
 	template<> void Option<bool>::read(const std::string & code)
 	{
 		switch(code[0])
@@ -180,6 +186,7 @@ namespace inlist
 		}
 	}
 
+	//parameter -- for storing values that may have physical units
 	template <typename T>
 	class Parameter: public Input<T>
 	{
@@ -197,10 +204,13 @@ namespace inlist
 		virtual std::string phys_value_string(){ return ""; }
 	};
 
+	//integer parameters
 	template<> void Parameter<int>::read(const std::string &c){ value = atoi(c.c_str());}  //this is common to all params of type double
 	
+	//double parameters
 	template<> void Parameter<double>::read(const std::string &c){ value = atof(c.c_str()); }
 
+	//template for list of two types of options
 	template<typename T1, typename T2> class OptionList: public List<Option<T1>*, Option<T2>*>
 	{
 	protected:
@@ -253,6 +263,7 @@ namespace inlist
 		//tested
 	}
 
+	//template for two types of parameters
 	template<typename T1, typename T2> class ParameterList: public List<Parameter<T1>*, Parameter<T2>*>
 	{
 	protected:

@@ -4,13 +4,15 @@
 #include <iostream>
 #include <vector>
 
-inline void abort_on_failure()
+//general functions
+
+inline void abort_on_failure()   //generic abort function
 {
 	exit(EXIT_FAILURE);
 }
 
 template <typename T>
-inline size_t sizet_round(const T & num)
+inline size_t sizet_round(const T & num)   //round number to size_t
 {
 	size_t nfloor = size_t(num);
 	if(num - ((T) nfloor) >= 0.5)
@@ -25,7 +27,7 @@ inline size_t sizet_round(const T & num)
 }
 
 template <typename T>
-std::vector<T> vectorise(const T * value_array, const int & N)
+std::vector<T> vectorise(const T * value_array, const int & N)    //turn c array into vector
 {
 	std::vector<T> v;
 	for(int n = 0; n < N; n++)

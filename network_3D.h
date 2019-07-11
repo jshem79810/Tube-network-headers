@@ -17,6 +17,7 @@
 #include <iostream>
 #include <iomanip>
 
+//name of file extensions for node, edge and term node files
 #define NODE_FILE_EXT "nodes"
 #define BRANCH_FILE_EXT "branches"
 #define TERM_NODE_FILE_EXT "termnodes"
@@ -25,6 +26,7 @@ namespace network
 {
 	typedef pos::Position<double> Position;
 
+	//for storing geometry of a tube that can have inner and outer areas
 	class TubeGeometry {
 	private:
 		//-------Member variables-------//
