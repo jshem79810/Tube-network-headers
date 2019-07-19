@@ -256,7 +256,8 @@ namespace network
 		void update_node_edge_maps();
 		void calc_edge_orders();
 		int print_files_for_input(const std::string &fhead, const double & length_scale) const;
-		virtual int print_vtk(const std::string &fhead, const double & length_scale) const;
+		virtual int print_vtk(const std::string &fhead, const double & length_scale,  
+		        const std::unordered_map<std::string,std::vector<double>> & extra_vals = std::unordered_map<std::string,std::vector<double>>()) const;
 		void copy_structure(Network<NodeType,EdgeType> *);
 		virtual int copy_vals(Network<NodeType,EdgeType> *t){ return (this->copy_tree_vals(t)); }
 
@@ -475,8 +476,8 @@ namespace network
 			long int branch_no;
 			long int ki;
 			long int ko;
-			NodeType *n_in;
-			NodeType *n_out;
+			NodeType *n_in = NULL;
+			NodeType *n_out = NULL;
 			double radius, orig_rad;
 			bool orad = false;
 			double Nb = 1;
@@ -880,8 +881,40 @@ namespace network
 		return 0;
 	}
 
-	template<class NodeType, class EdgeType> int Network<NodeType,EdgeType>::print_vtk(const std::string &fhead, const double & length_scale) const 
+	template<class NodeType, class EdgeType> int Network<NodeType,EdgeType>::print_vtk(const std::string &fhead, const double & length_scale,
+		                              const std::unordered_map<std::string, std::vector<double>> & extra_vals) const 
 	{
+		//unpack extra values from extra_vals
+		//strings to store parameter names
+		std::vector<std::string> node_val_keys, edge_val_keys, term_node_val_keys;
+
+
+		if (extra_vals.size() > 0)
+		{
+			//iterate over map entries
+			for(auto it=extra_vals.begin(); it!=extra_vals.end(); ++it)
+			{
+				if(it->second.size() == this->count_nodes())
+				{
+						//must be a property of the nodes
+						node_val_keys.push_back(it->first);
+				}
+				else
+				{
+					if(it->second.size() ==  this->count_edges())
+					{
+						edge_val_keys.push_back(it->first);
+					}
+					else
+					{
+						std::cout << "Cannot print " << it->first << " to .vtk file, size does not match.\n";
+					}
+				}
+			}
+		}
+
+
+
 		std::stringstream ss;
 		ss << fhead << ".vtk";
 		std::string filename = ss.str().c_str();
@@ -898,7 +931,8 @@ namespace network
 		{
 			output << this->get_node(k)->get_pos(0) * length_scale << ' ' << this->get_node(k)->get_pos(1) * length_scale << ' ' << this->get_node(k)->get_pos(2) * length_scale << '\n';
 		}
-		//could define extra points and edges here for shapes for each acinus
+
+		//could define extra points and edges here for shapes for each terminal node
 
 		size_t Ncells = this->count_edges();
 
@@ -911,6 +945,19 @@ namespace network
 		output <<  "\n\nCELL_TYPES " << Ncells << '\n';  //all cell types are edges
 		for (size_t j = 0; j < Ncells; j++) output << "3\n";
 
+		output <<  "\n\nPOINT_DATA " << Npts << "\n";
+
+		//loop over extra node args
+		for (size_t i_extra = 0; i_extra < node_val_keys.size(); i_extra++)
+		{
+			std::string key = node_val_keys[i_extra];
+			output <<  "\nSCALARS " << key << " float\nLOOKUP_TABLE default\n";
+			for (size_t k = 0; k < Npts; k++)
+			{
+				output << (extra_vals.find(key)->second)[k] << '\n';
+			}
+		}
+
 		output <<  "\n\nCELL_DATA " << Ncells << "\n";
 		output <<  "\nSCALARS Nbranches float\nLOOKUP_TABLE default\n";
 		for (size_t j = 0; j < Ncells; j++)
@@ -922,6 +969,17 @@ namespace network
 		for (size_t j = 0; j < Ncells; j++)
 		{
 			output << this->get_edge(j)->get_geom()->get_inner_radius() * length_scale << '\n';  //node numbers are order they are printed to vtk
+		}
+
+				//loop over extra node args
+		for (size_t i_extra = 0; i_extra < edge_val_keys.size(); i_extra++)
+		{
+			std::string key = edge_val_keys[i_extra];
+			output <<  "\nSCALARS " << key << " float\nLOOKUP_TABLE default\n";
+			for (size_t j = 0; j < Ncells; j++)
+			{
+				output << (extra_vals.find(key)->second)[j] << '\n';
+			}
 		}
 
 		output.close();
