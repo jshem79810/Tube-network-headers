@@ -159,6 +159,12 @@ namespace network
 		double Nbranches;
 		TubeGeometry *geom;
 		TubeGeometry *original_geom;
+		inline void init_geom(const double & rad)
+		{
+			double len = this->node_in->get_pos().distance(this->node_out->get_pos());
+			this->geom = new TubeGeometry(rad, len);
+			this->original_geom = this->geom;
+		}
 		inline void set_nodes(NodeType *ni, NodeType *no)
 		{
 			this->node_in = ni;
@@ -181,12 +187,16 @@ namespace network
 		{
 			this->set_nodes(ni, no);
 		}
+		Edge(NodeType *ni, NodeType *no, const double & rad)
+		{
+			this->set_nodes(ni, no);
+			this->init_geom(rad);
+			this->Nbranches = 1;
+		}
 		Edge(NodeType *ni, NodeType *no, const double & Nb, const double & rad)
 		{
 			this->set_nodes(ni, no);
-			double len = ni->get_pos().distance(no->get_pos());
-			this->geom = new TubeGeometry(rad, len);
-			this->original_geom = this->geom;
+			this->init_geom(rad);
 			this->Nbranches = Nb;
 		}
 
