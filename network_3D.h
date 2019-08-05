@@ -141,6 +141,7 @@ namespace network
 		Edge(NodeType *ni, NodeType *no)
 		{
 			this->set_nodes(ni, no);
+			this->geom = new TubeGeometry(0, 0);
 		}
 		Edge(NodeType *ni, NodeType *no, const double & Nb, const double & rad)
 		{
@@ -149,11 +150,18 @@ namespace network
 			this->geom = new TubeGeometry(rad, len);
 			this->Nbranches = Nb;
 		}
+			Edge(NodeType *ni, NodeType *no, const double & Nb, const double & rad, const double & orad)
+		{
+			this->set_nodes(ni, no);
+			double len = ni->get_pos().distance(no->get_pos());
+			this->geom = new TubeGeometry(rad, len, orad);
+			this->Nbranches = Nb;
+		}
 
 		inline NodeType* get_node_in() const { return (this->node_in); }
 		inline NodeType* get_node_out() const { return (this->node_out); }
 		inline double branch_count() const { return (this->Nbranches); }
-		inline TubeGeometry* get_geom() const { return this->geom; }
+		inline const TubeGeometry* get_geom() const { return this->geom; }
 
 		virtual double get_inner_volume() const { return ((this->Nbranches)*(this->geom->inner_volume())); }
 		virtual double get_outer_volume() const { return ((this->Nbranches)*(this->geom->outer_volume())); }
@@ -162,6 +170,8 @@ namespace network
 
 		virtual void update_geometry(const TubeGeometry &tg){ *(this->geom) = tg; };
 		virtual void update_geometry(const double & rad, const double & len){ *(this->geom) = TubeGeometry(rad,len); }
+		virtual void update_inner_radius(const double & rad){ this->geom->update_inner_radius(rad); }
+		virtual void update_outer_radius(const double & orad){ this->geom->update_outer_radius(orad); }
 		virtual void copy_edge_vals(Edge<NodeType> *edge)
 		{
 			*(this->geom) = *(edge->get_geom());
@@ -175,6 +185,7 @@ namespace network
 	template<class NodeType, class EdgeType> class Network 
 	{
 	private: 
+		std::vector<double> blank_vector;
 		std::map<char, std::unordered_map<NodeType*, std::vector<double>>> extra_node_inputs;   //use these to store any extra inputs from files
 		std::map<char, std::unordered_map<EdgeType*, std::vector<double>>> extra_edge_inputs;
 		void initialise_from_maps(std::map<long int, NodeType*> &node, std::map<long int, EdgeType*> &edge);
@@ -201,6 +212,8 @@ namespace network
 			this->update_node_edge_maps();
 			if(this->reorder_network()) abort_on_failure();   //returns 1 on error
 		}
+		int reorder_network( std::vector<size_t> & old_node_indices_to_new = std::vector<size_t>(), std::vector<size_t> & old_edge_indices_to_new = std::vector<size_t> () );
+		void update_node_edge_maps();
 	public:
 		//constructors
 		Network(){};
@@ -214,10 +227,9 @@ namespace network
 		Network(const std::string & node_fname, const std::string & edge_fname, const std::string & term_fname, const double & l_scale);
 
 		//void build_network_matrices();
-		int reorder_network( std::vector<size_t> & old_node_indices_to_new = std::vector<size_t>(), std::vector<size_t> & old_edge_indices_to_new = std::vector<size_t> () );
-		void update_node_edge_maps();
 		void calc_edge_orders();
-		int print_files_for_input(const std::string &fhead, const double & length_scale, const std::unordered_map<char, std::vector<std::vector<double>>> & extra_vals) const;
+		int print_files_for_input(const std::string &fhead, const double & length_scale, const std::map<char, std::vector<std::vector<double>>> 
+			                                                           & extra_vals = std::map<char, std::vector<std::vector<double>>>()) const;
 		virtual int print_vtk(const std::string &fhead, const double & length_scale,  
 		        const std::unordered_map<std::string,std::vector<double>> & extra_vals = std::unordered_map<std::string,std::vector<double>>()) const;
 		void copy_structure(Network<NodeType,EdgeType> *);
@@ -247,7 +259,7 @@ namespace network
 		inline size_t get_node_out_index(const size_t & edge_no) const { return (this->node_out_indices[edge_no]); }
 		inline size_t get_horsfield_order(const size_t & edge_no) const { return (this->edge_horsfield_order[edge_no]); }
 		inline size_t get_weibel_order(const size_t & edge_no) const { return (this->edge_weibel_order[edge_no]); }
-		inline std::vector<double>& get_extra_node_inputs(const char & arg, NodeType *n)
+		inline const std::vector<double>& get_extra_node_inputs(const char & arg, NodeType *n)
 		{ 
 			auto input_it = this->extra_node_inputs.find(arg);
 
@@ -260,9 +272,9 @@ namespace network
 				}
 			}
 
-			return (std::vector<double>());
+			return this->blank_vector;
 		}
-		inline std::vector<double>& get_extra_edge_inputs(const char & arg, EdgeType *e)
+		inline const std::vector<double>& get_extra_edge_inputs(const char & arg, EdgeType *e)
 		{ 
 			auto input_it = this->extra_edge_inputs.find(arg);
 
@@ -275,7 +287,7 @@ namespace network
 				}
 			}
 
-			return (std::vector<double>());
+			return (this->blank_vector);
 		}
 		inline std::vector<char> get_extra_node_args() const
 		{
@@ -307,10 +319,8 @@ namespace network
 
 		void remove_nodes(std::vector<std::size_t> & node_indices);
 		void remove_edges(std::vector<std::size_t> & edge_indices);
-		void discretise_for_transport(const int & minfv, const double & dx, std::vector<std::vector<NodeType*>> & map = std::vector<std::vector<NodeType*>>());
-		double get_edge_volume() const;
-		double get_node_volume() const;
-		double return_tot_volume() const;
+		double get_total_edge_volume() const;
+		double get_total_inner_edge_volume() const;
 		double count_branches_in(const size_t & node_no) const;
 	};
 
@@ -372,11 +382,11 @@ namespace network
 						extra_node_inputs[arg] = std::unordered_map<NodeType*, std::vector<double>>();
 					}
 					std::vector<double> parts;
-					parts.resize(part_split.size());
+					parts.resize(part_split.size()-1);
 					//may not necessarily accompany every node, therefore need to link to node pointers.
 					for(size_t n = 1; n < part_split.size(); n++)
 					{
-						parts[n] = StringToNumber<double>(part_split[n]);
+						parts[n-1] = StringToNumber<double>(part_split[n]);
 					}
 					extra_node_inputs[arg][node[node_no]] = parts;
 				}
@@ -420,11 +430,11 @@ namespace network
 						extra_node_inputs[arg] = std::unordered_map<NodeType*, std::vector<double>>();
 					}
 					std::vector<double> parts;
-					parts.resize(part_split.size());
+					parts.resize(part_split.size()-1);
 					//may not necessarily accompany every node, therefore need to link to node pointers.
 					for(size_t n = 1; n < part_split.size(); n++)
 					{
-						parts[n] = StringToNumber<double>(part_split[n]);
+						parts[n-1] = StringToNumber<double>(part_split[n]);
 					}
 					extra_node_inputs[arg][node[ni]] = parts;
 				}
@@ -499,11 +509,11 @@ namespace network
 								extra_edge_inputs[arg] = std::unordered_map<EdgeType*, std::vector<double>>();
 							}
 							extra_parts[arg] = std::vector<double>();
-							extra_parts[arg].resize(part_split.size());
+							extra_parts[arg].resize(part_split.size()-1);
 							//may not necessarily accompany every node, therefore need to link to node pointers.
 							for(size_t n = 1; n < part_split.size(); n++)
 							{
-								extra_parts[arg][n] = StringToNumber<double>(part_split[n]);
+								extra_parts[arg][n-1] = StringToNumber<double>(part_split[n]);
 							}
 							
 						} break;
@@ -516,10 +526,6 @@ namespace network
 				extra_edge_inputs[it->first][edge[branch_no]] = it->second;
 			}
 			n_out->set_point_count(Nb);
-			//if(orad)
-			//{
-			//	edge[branch_no]->set_original_geom(new TubeGeometry(orig_rad, edge[branch_no]->get_geom()->get_length()));
-			//}
 		}
 
 		return 0;
@@ -562,6 +568,8 @@ namespace network
 			all_other_node_indices.reserve(this->NodeVec.size()-1);
 			term_edge_indices.reserve(this->EdgeVec.size()-1);
 			all_other_edge_indices.reserve(this->EdgeVec.size()-1);
+			old_node_indices_to_new.resize(this->NodeVec.size());
+			old_edge_indices_to_new.resize(this->EdgeVec.size());
 
 			for(size_t k = 0; k < this->count_nodes(); k++)   //reorder nodes
 			{
@@ -616,16 +624,19 @@ namespace network
 
 			//re-fill node vector -- trachea, then intermediate, then terminal
 			this->NodeVec[0] = old_node_vec[trachea_node_index];
+			old_node_indices_to_new[trachea_node_index] = 0;
 			size_t count = 1;
 			for(size_t ni = 0; ni < all_other_node_indices.size(); ni++)
 			{
 				this->NodeVec[ni + count] = old_node_vec[all_other_node_indices[ni]];
+				old_node_indices_to_new[all_other_node_indices[ni]] = ni + count;
 			}
 			count += all_other_node_indices.size();
 			this->term_start = count;
 			for(size_t nt = 0; nt < term_node_indices.size(); nt++)
 			{
 				this->NodeVec[nt + count] = old_node_vec[term_node_indices[nt]];
+				old_node_indices_to_new[term_node_indices[nt]] = nt + count;
 			}
 
 			//re-fill edge vector -- trachea, then intermediate, then terminal
@@ -633,16 +644,19 @@ namespace network
 			for(size_t j0 = 0; j0 < trachea_edge_indices.size(); j0++)
 			{
 				this->EdgeVec[j0] = old_edge_vec[trachea_edge_indices[j0]];
+				old_edge_indices_to_new[trachea_edge_indices[j0]] = j0;
 				count++;
 			}
 			for(size_t ji = 0; ji < all_other_edge_indices.size(); ji++)
 			{
 				this->EdgeVec[ji + count] = old_edge_vec[all_other_edge_indices[ji]];
+				old_edge_indices_to_new[all_other_edge_indices[ji]] = ji + count;
 			}
 			count += all_other_edge_indices.size();
 			for(size_t jt = 0; jt < term_edge_indices.size(); jt++)
 			{
 				this->EdgeVec[jt + count] = old_edge_vec[term_edge_indices[jt]];
+				old_edge_indices_to_new[term_edge_indices[jt]] = jt + count;
 			}
 
 			this->update_node_edge_maps();
@@ -794,7 +808,7 @@ namespace network
 	//template to print files to import network
 	template<class NodeType, class EdgeType> int Network<NodeType,EdgeType>::print_files_for_input
 		                          (const std::string &fhead, const double & length_scale, 
-			                       const std::unordered_map<char, std::vector<std::vector<double>>> & extra_vals) const 
+			                       const std::map<char, std::vector<std::vector<double>>> & extra_vals) const 
 	{
 		std::vector<char> node_val_keys, edge_val_keys, term_node_val_keys;
 		if (extra_vals.size() > 0)
@@ -815,7 +829,10 @@ namespace network
 					}
 					else
 					{
-						term_node_val_keys.push_back(it->first);
+						if(it->second.size() ==  this->count_term_nodes())
+						{
+							term_node_val_keys.push_back(it->first);
+						}
 						else
 						{
 							std::cout << "Cannot print " << it->first << " to .vtk file, size does not match.\n";
@@ -836,18 +853,19 @@ namespace network
 			node_file << k << ", " << this->get_node(k)->get_pos(0) * length_scale << ", " 
 				      << this->get_node(k)->get_pos(1) * length_scale << ", " 
 					  << this->get_node(k)->get_pos(2) * length_scale;
-			for(size_t i_e = 0; i_e < node_val_keys; i_e++)
+			for(size_t i_e = 0; i_e < node_val_keys.size(); i_e++)
 			{
-				if(extra_args[node_val_keys[i_e]][k].size() > 0)
+				std::vector<std::vector<double>> x = extra_vals.find(node_val_keys[i_e])->second;
+				if(x[k].size() > 0)
 				{
 					node_file << ": " << node_val_keys[i_e];
-					for(size_t n_arg = 0; n_arg < extra_args[node_val_keys[i_e]][k].size(); n_arg++)
+					for(size_t n_arg = 0; n_arg < x[k].size(); n_arg++)
 					{
-						node_file << ", " <<  extra_args[node_val_keys[i_e]][k][n_arg];
+						node_file << ", " <<  x[k][n_arg];
 					}
 				}
 			}
-			std::cout << '\n';
+			node_file << '\n';
 		}
 		node_file.close();
 
@@ -866,14 +884,19 @@ namespace network
 			{
 				edge_file << ": r, " << this->get_edge(j)->get_original_geom()->get_inner_radius();
 			}
-			for(size_t i_e = 0; i_e < edge_val_keys; i_e++)
+			if(this->get_edge(j)->get_geom()->get_outer_radius() != this->get_edge(j)->get_geom()->get_inner_radius())
 			{
-				if(extra_args[edge_val_keys[i_e]][j].size() > 0)
+				edge_file << ": o, " << this->get_edge(j)->get_geom()->get_outer_radius();
+			}
+			for(size_t i_e = 0; i_e < edge_val_keys.size(); i_e++)
+			{
+				std::vector<std::vector<double>> x = extra_vals.find(edge_val_keys[i_e])->second;
+				if(x[j].size() > 0)
 				{
 					edge_file << ": " << edge_val_keys[i_e];
-					for(size_t n_arg = 0; n_arg < extra_args[edge_val_keys[i_e]][j].size(); n_arg++)
+					for(size_t n_arg = 0; n_arg < x[j].size(); n_arg++)
 					{
-						edge_file << ", " <<  extra_args[edge_val_keys[i_e]][j][n_arg];
+						edge_file << ", " <<  x[j][n_arg];
 					}
 				}
 			}
@@ -903,14 +926,15 @@ namespace network
 			{
 				tnode_file << ": r, " << this->get_node(k)->get_seed_rad();
 			}
-			for(size_t i_e = 0; i_e < term_node_val_keys; i_e++)
+			for(size_t i_e = 0; i_e < term_node_val_keys.size(); i_e++)
 			{
-				if(extra_args[term_node_val_keys[i_e]][k_term].size() > 0)
+				std::vector<std::vector<double>> x = extra_vals.find(term_node_val_keys[i_e])->second;
+				if(x[k_term].size() > 0)
 				{
 					tnode_file << ": " << term_node_val_keys[i_e];
-					for(size_t n_arg = 0; n_arg < extra_args[term_node_val_keys[i_e]][k_term].size(); n_arg++)
+					for(size_t n_arg = 0; n_arg < x[k_term].size(); n_arg++)
 					{
-						tnode_file << ", " <<  extra_args[term_node_val_keys[i_e]][k_term][n_arg];
+						tnode_file << ", " <<  x[k_term][n_arg];
 					}
 				}
 			}
@@ -1105,104 +1129,25 @@ namespace network
 		}
 	}
 
-	template<class NodeType, class EdgeType> void Network<NodeType,EdgeType>::discretise_for_transport(const int & minfv, const double & dx,
-		                                                                       std::vector<std::vector<NodeType*>> & old_edges_to_new_nodes)
+	template<class NodeType, class EdgeType> double Network<NodeType,EdgeType>::get_total_edge_volume() const
 	{
-		//re-discretize network to make fv nodes
-		//store old network
-		Network<NodeType,EdgeType> tree_in(*this);
-		size_t NNodes0 = tree_in.count_nodes();
-		size_t NEdges0 = tree_in.count_edges();
-		old_edges_to_new_nodes.resize(NEdges0);
-
-		//vector to count no. of finite volumes in each branch
-		std::vector<int> nfv;
-		nfv.reserve(minfv*NEdges0);
-		size_t totfv = 0;
-
-		//need to copy nodes so that they point at correct edges
-		this->EdgeVec.clear();
-		for(size_t j = 0; j < NEdges0; j++)
+		double v = 0;
+		for(size_t j = 0; j < this->count_edges(); j++)
 		{
-			int nfvh = std::max(minfv, int(ceil(tree_in.get_edge(j)->get_geom()->get_length() / dx)));
-			//record how many elements each edge will be split into
-			nfv.push_back(nfvh);
-			totfv += nfvh;
-			//record nodes at start and end of transport branch
-			double rad = tree_in.get_edge(j)->get_geom()->get_inner_radius();
-			double length = tree_in.get_edge(j)->get_geom()->get_length() / double(nfvh);
-
-			size_t k_start = tree_in.get_node_in_index(j);
-			if(tree_in.get_weibel_order(j)==0) 
-			{
-				old_edges_to_new_nodes[j].push_back(tree_in.get_node(k_start));
-			}
-			size_t k_end = tree_in.get_node_out_index(j);
-			Position direction = tree_in.get_node(k_end)->get_pos() - tree_in.get_node(k_start)->get_pos();
-			NodeType *last_node = tree_in.get_node(k_start);
-			for(int el = 0; el < nfvh; el++)  //loop over fv elements (nodes)
-			{
-				//create extra intermediate nodes and edges
-				double frac = (((double) el) + 0.5) / ((double) nfvh);
-				NodeType *this_node = new NodeType(tree_in.get_node(k_start)->get_pos(0) + frac*direction.x[0],
-																	  tree_in.get_node(k_start)->get_pos(1) + frac*direction.x[1],
-																	  tree_in.get_node(k_start)->get_pos(2) + frac*direction.x[2]);
-				this_node->set_point_count(tree_in.get_edge(j)->branch_count());
-				this_node->set_fv_geom(TubeGeometry(rad, length));
-				old_edges_to_new_nodes[j].push_back(this_node);
-
-				this->NodeVec.push_back(this_node);
-				this->EdgeVec.push_back(new EdgeType(last_node, this_node, tree_in.get_edge(j)->branch_count(), rad));
-
-				last_node = this_node;
-			}
-			//final edge connecting to k_end
-			EdgeVec.push_back(new EdgeType(last_node, tree_in.get_node(k_end), tree_in.get_edge(j)->branch_count(),
-								   tree_in.get_edge(j)->get_geom()->get_inner_radius()));
-			old_edges_to_new_nodes[j].push_back(tree_in.get_node(k_end));
+			v += this->get_edge(j)->get_outer_volume();
 		}
-		//reorder and stuff
-		this->update_node_edge_maps();
-		this->reorder_network();
+		return v;
 	}
 
-	template<class NodeType, class EdgeType> double Network<NodeType,EdgeType>::get_edge_volume() const 
+	template<class NodeType, class EdgeType> double Network<NodeType,EdgeType>::get_total_inner_edge_volume() const
 	{
-		double vol = 0;
-		for(size_t j = 0; j < this->EdgeVec.size(); j++)
+		double v = 0;
+		for(size_t j = 0; j < this->count_edges(); j++)
 		{
-			vol += this->EdgeVec[j]->get_outer_volume();
+			v += this->get_edge(j)->get_inner_volume();
 		}
-		return vol;
+		return v;
 	}
-
-	template<class NodeType, class EdgeType> double Network<NodeType,EdgeType>::get_node_volume() const 
-	{
-		double vol = 0;
-		for(size_t k = 0; k < this->NodeVec.size(); k++)
-		{
-			vol += this->get_node(k)->get_volume();
-		}
-		return vol;
-	}
-
-	template<class NodeType, class EdgeType> double Network<NodeType,EdgeType>::return_tot_volume() const 
-	{
-		double vol = this->get_edge_volume();
-		vol += this->get_node_volume();
-		return vol;
-	}
-
-	template<class NodeType, class EdgeType> double Network<NodeType,EdgeType>::count_branches_in(const size_t & node_no) const 
-	{
-		double N = 0;
-		for (size_t j = 0; j < this->count_edges_in(node_no); j++)
-		{
-			N += this->get_edge(this->get_edge_in_index(node_no, j))->branch_count();
-		}
-		return N; 
-	}
-
 }
 
 
