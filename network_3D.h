@@ -239,7 +239,7 @@ namespace network
 
 		//void build_network_matrices();
 		void calc_edge_orders();
-		int print_files_for_input(const std::string &fhead, const double & length_scale, const std::map<char, std::vector<std::vector<double>>>
+		virtual int print_files_for_input(const std::string &fhead, const double & length_scale, const std::map<char, std::vector<std::vector<double>>>
 			                                                           & extra_vals = std::map<char, std::vector<std::vector<double>>>()) const;
 		virtual int print_vtk(const std::string &fhead, const double & length_scale,
 		        const std::unordered_map<std::string,std::vector<double>> & extra_vals = std::unordered_map<std::string,std::vector<double>>()) const;
