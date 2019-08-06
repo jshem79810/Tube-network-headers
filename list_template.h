@@ -235,7 +235,7 @@ namespace inlist
 		}
 		inline std::string get_filename(const std::string & code, const size_t & n){ return this->filenames[code][n]; }
 		inline bool filename_exists(const std::string & code){ return (this->filenames.find(code) != this->filenames.end()); }
-		void get_filenames_from_args(const std::vector<std::string> & extensions, const int &argc, char** argv);
+		void get_filenames_from_args(const std::vector<std::string> & extensions, const int &argc, const char** argv);
 	};
 
 	template<typename T1, typename T2> void OptionList<T1,T2>::get_filenames_from_args(const std::vector<std::string> & extensions, const int &argc, char** argv)

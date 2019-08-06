@@ -891,10 +891,6 @@ namespace network
 					  << this->get_node_index(this->get_edge(j)->get_node_out()) << ", "
 					  << this->get_edge(j)->get_geom()->get_inner_radius() * length_scale
 					  << ": n, " << this->get_edge(j)->branch_count();
-			if(this->get_edge(j)->has_geom_changed())
-			{
-				edge_file << ": r, " << this->get_edge(j)->get_original_geom()->get_inner_radius();
-			}
 			if(this->get_edge(j)->get_geom()->get_outer_radius() != this->get_edge(j)->get_geom()->get_inner_radius())
 			{
 				edge_file << ": o, " << this->get_edge(j)->get_geom()->get_outer_radius();
@@ -924,19 +920,7 @@ namespace network
 		{
 			size_t k_term = k - this->get_first_term_index();
 			tnode_file << k;
-			if(this->get_node(k)->has_pos_changed())   //term nodes may have been averaged, give info about original term nodes if so
-			{
-				tnode_file << ": p";
-				for(size_t np = 0; np < 3; np++) tnode_file <<  ", " << this->get_node(k)->get_original_pos().x[np];
-			}
-			if(this->get_node(k)->has_npts_changed())
-			{
-				tnode_file <<  ": n, " <<  this->get_node(k)->get_original_npts();
-			}
-			if(this->get_node(k)->has_seed_rad_changed())
-			{
-				tnode_file << ": r, " << this->get_node(k)->get_seed_rad();
-			}
+
 			for(size_t i_e = 0; i_e < term_node_val_keys.size(); i_e++)
 			{
 				std::vector<std::vector<double>> x = extra_vals.find(term_node_val_keys[i_e])->second;
