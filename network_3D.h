@@ -467,7 +467,8 @@ namespace network
 			NodeType *n_in = NULL;
 			NodeType *n_out = NULL;
 			double radius;
-			bool orad = false;
+			double orad;
+			bool orad_given = false;
 			double Nb = 1;
 			std::vector<std::string> colon_split = string_split(branch_data[row],":");
 			//different args separated by colons
@@ -512,6 +513,19 @@ namespace network
 
 						} break;
 
+					case 'o': //outer rad to follow
+						{
+							if(part_split.size() < 2)
+							{
+								std::cout << "Error, not enough columns for edge " << row << '\n';
+								abort_on_failure();
+							}
+							else
+							{
+								orad = StringToNumber<double>(part_split[1]);
+								orad_given = true;
+							}
+						} break;
 					default:
 						{
 							//add to unordered map
@@ -531,7 +545,8 @@ namespace network
 					}
 				}
 			}
-			edge[branch_no] = new EdgeType(n_in, n_out, Nb, radius);
+			if(!orad_given) orad = radius;
+			edge[branch_no] = new EdgeType(n_in, n_out, Nb, radius, orad);
 			for(auto it = extra_parts.begin(); it != extra_parts.end(); ++it)
 			{
 				extra_edge_inputs[it->first][edge[branch_no]] = it->second;

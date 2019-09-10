@@ -11,10 +11,10 @@ inline void abort_on_failure()   //generic abort function
 	exit(EXIT_FAILURE);
 }
 
-template <typename T>
-inline size_t sizet_round(const T & num)   //round number to size_t
+template <typename I, typename T>
+inline I int_round(const T & num)   //round number to size_t
 {
-	size_t nfloor = size_t(num);
+	I nfloor = I(num);
 	if(num - ((T) nfloor) >= 0.5)
 	{
 		return nfloor + 1;
@@ -23,7 +23,6 @@ inline size_t sizet_round(const T & num)   //round number to size_t
 	{
 		return nfloor;
 	}
-
 }
 
 template <typename T>

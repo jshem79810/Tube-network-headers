@@ -85,23 +85,26 @@ inline std::vector<std::vector<T>> parse_csv_file(const std::string &name)    //
 	std::stringstream ss;
 	std::vector<std::vector<T>> data;
 
-	file.open(name);
-	unsigned count = 0;
-	while(getline(file, s))
+	if(!check_infile(name))
 	{
-		ss.str(s);
-		std::string nc;
-		unsigned n = 0;
-		data.resize(count+1);
-		while(getline(ss, nc, ','))
+		file.open(name);
+		unsigned count = 0;
+		while(getline(file, s))
 		{
-			data[count].push_back(StringToNumber<T>(nc));
-			n++;
+			ss.str(s);
+			std::string nc;
+			unsigned n = 0;
+			data.resize(count+1);
+			while(getline(ss, nc, ','))
+			{
+				data[count].push_back(StringToNumber<T>(nc));
+				n++;
+			}
+			ss.clear();
+			count++;
 		}
-		ss.clear();
-		count++;
+		file.close();
 	}
-	file.close();
 
 	return data;
 }
@@ -120,6 +123,45 @@ inline std::vector<std::string> string_split(const std::string & str, const std:
     }
     while (pos < str.length() && prev < str.length());
     return tokens;
+}
+
+template <typename T>
+inline int write_csv_file(const std::string &name, const std::vector<std::string> & headers, const std::vector<std::vector<T>> & data)    
+//write csv file from vector of vectors of typename T
+{
+	std::ofstream file;
+
+	if(!check_outfile(name))
+	{
+		file.open(name);
+		if(headers.size() > 0)
+		{
+			file << headers[0];
+			for(size_t i = 1; i < headers.size(); i++)
+			{
+				file << ", " << headers[i];
+			}
+			file << "\n";
+		}
+		for(size_t r = 0; r < data.size(); r++)
+		{
+			if(data[r].size() > 0)
+			{
+				file << data[r][0];
+				for(size_t i = 1; i < data[r].size(); i++)
+				{
+					file << ", " << data[r][i];
+				}
+				file << "\n";
+			}
+		}
+		file.close();
+		return 0;
+	}
+	else
+	{
+		return 1;
+	}
 }
 
 #endif
