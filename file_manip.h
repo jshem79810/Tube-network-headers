@@ -164,4 +164,47 @@ inline int write_csv_file(const std::string &name, const std::vector<std::string
 	}
 }
 
+template <typename T>
+inline int write_csv_file_cols(const std::string &name, const std::vector<std::string> & headers, const std::vector<std::vector<T>> & data)    
+//write csv file from vector of vectors of typename T
+{
+	std::ofstream file;
+
+	if(!check_outfile(name))
+	{
+		file.open(name);
+		if(headers.size() > 0)
+		{
+			file << headers[0];
+			for(size_t i = 1; i < headers.size(); i++)
+			{
+				file << ", " << headers[i];
+			}
+			file << "\n";
+		}
+		for(size_t r = 0; r < data[0].size(); r++)
+		{
+			file << data[0][r];
+			for(size_t i = 1; i < data.size(); i++)
+			{
+				if(r < data[i].size())
+				{
+					file << ", " << data[i][r];
+				}
+				else
+				{
+					file << ", ";
+				}
+			}
+			file << "\n";
+		}
+		file.close();
+		return 0;
+	}
+	else
+	{
+		return 1;
+	}
+}
+
 #endif
