@@ -31,7 +31,6 @@ A guide to each is given below.
     - const Position & get_pos(): returns position for access and copying
     - double get_pos(const int & i): returns position in dimension 0 <= i <= 2 (0=x, 1=y, 2=z)
     - double get_point_count(): returns value of Npts
-    
 
     Functions to update node properties are
     - void set_pos(const Position & p): sets node position to p
@@ -49,7 +48,8 @@ A guide to each is given below.
     - Egde(std::shared_ptr<NodeType> ni, std::shared_ptr<NodeType> no, const double & Nb, const double & rad): Same as above but now edge represents Nb tubes in parallel (stored in Nbranches -- default otherwise is 1).
     - Egde(std::shared_ptr<NodeType> ni, std::shared_ptr<NodeType> no, const double & Nb, const double & rad, const double & orad): Same as above but tube geometry has "outer radius" differs from inner radius.
 
-
+  To be continued...
+    
     Access functions are:
     - 
 
