@@ -29,9 +29,9 @@ namespace inlist
 		bool parse(const std::string &name, const std::string &nc);
 		inline void add(const std::string & name, const T1 & entry){ this->dict1[name] = entry; }
 		inline void add(const std::string & name, const T2 & entry){ this->dict2[name] = entry; }
-		template<class T3> T3 get(const std::string & name){ return NULL; }
-		template<> T1 get<T1>(const std::string & name){ return this->dict1[name]; }
-		template<> T2 get<T2>(const std::string & name){ return this->dict2[name]; }
+		template<class T3> T3 get(const std::string & name) const { return NULL; }
+		template<> T1 get<T1>(const std::string & name) const { return this->dict1[name]; }
+		template<> T2 get<T2>(const std::string & name) const { return this->dict2[name]; }
 	};
 
 	template<class T1, class T2> 
@@ -112,16 +112,17 @@ namespace inlist
 		}
 		virtual void update_value( const T & v ){ value = v; }
 		virtual void read(const std::string &){};
-		virtual std::string print(){return "Undefined";}
+		virtual std::string print() const {return "Undefined";}
 	};
 
 	//option class
 	template <typename T>
 	class Option: public Input<T>{
-	public:
+	protected:
 		std::vector<T> possible_values;
 		std::vector<std::string> value_names;
-		std::string print()
+	public:
+		std::string print() const 
 		{
 			for (unsigned i = 0; i < ((unsigned) possible_values.size()); i++)
 			{
@@ -142,6 +143,14 @@ namespace inlist
 			value_names = vectorise(option_name_list, option_count);
 		}
 		void read(const std::string & code){};
+		std::string get_value_name() const 
+		{
+			for(int i = 0; i < this->possible_values.size(); i++)
+			{
+				if(this->value == this->possible_values[i]) return this->value_names[i];
+			}
+			return "Error";
+		}
 	};
 
 	//character option -- for multiple choice options
@@ -196,12 +205,12 @@ namespace inlist
 		virtual void read(const std::string & code){};
 
 		virtual void set_conversion( T * ){};
-		virtual bool isOK(){ return true; }
-		virtual T get_phys_value(){ return this->value; }
-		virtual T get_SI_value(){ return this->value; }
+		virtual bool isOK() const { return true; }
+		virtual T get_phys_value() const { return this->value; }
+		virtual T get_SI_value() const { return this->value; }
 		virtual void set_phys_value( const T & val ){ this->value = val; }
 		virtual void calc_sim_from_phys_value(){};
-		virtual std::string phys_value_string(){ return ""; }
+		virtual std::string phys_value_string() const { return ""; }
 	};
 
 	//integer parameters
@@ -218,28 +227,28 @@ namespace inlist
 	public:
 
 		OptionList(){};   //default constructor is blank
-		template<typename T3> Option<T3>* get_option(const std::string & name){};
-		template<> Option<T1>* get_option<T1>(const std::string & name){ return this->dict1[name]; }
-		template<> Option<T2>* get_option<T2>(const std::string & name){ return this->dict2[name]; }
+		template<typename T3> Option<T3>* get_option(const std::string & name) const {};
+		template<> Option<T1>* get_option<T1>(const std::string & name) const { return this->dict1.at(name); }
+		template<> Option<T2>* get_option<T2>(const std::string & name) const { return this->dict2.at(name); }
 
 		inline void add_filename(const std::string & code, const std::string & fname)
 		{ 
 			if(!this->filename_exists(code)) this->filenames[code] = std::vector<std::string>(); 
 			this->filenames[code].push_back(fname);
 		}
-		inline size_t count_files_with_ext(const std::string & code){ return this->filenames[code].size(); }
-		inline std::string get_filename(const std::string & code)
+		inline size_t count_files_with_ext(const std::string & code) const { return this->filenames.at(code).size(); }
+		inline std::string get_filename(const std::string & code) const 
 		{ 
-			if(this->filenames[code].size() > 1) std::cout << "Warning, more than one file with extension " << code << '\n';
-			return this->filenames[code][0]; 
+			if(this->filenames.at(code).size() > 1) std::cout << "Warning, more than one file with extension " << code << '\n';
+			return this->filenames.at(code)[0]; 
 		}
-		inline std::string get_filename(const std::string & code, const size_t & n){ return this->filenames[code][n]; }
-		inline bool filename_exists(const std::string & code){ return (this->filenames.find(code) != this->filenames.end()); }
+		inline std::string get_filename(const std::string & code, const size_t & n) const { return this->filenames.at(code)[n]; }
+		inline bool filename_exists(const std::string & code) const { return (this->filenames.find(code) != this->filenames.end()); }
 		void get_filenames_from_args(const std::vector<std::string> & extensions, const int &argc, char** argv);
 	};
 
 	template<typename T1, typename T2> void OptionList<T1,T2>::get_filenames_from_args
-		              (const std::vector<std::string> & extensions, const int &argc, char** argv)
+		              (const std::vector<std::string> & extensions, const int &argc, char** argv) 
 	{
 		//arguments sorted into ordered map, where keyword is their file extension
 		for(int n = 1; n < argc; n++)
@@ -282,13 +291,13 @@ namespace inlist
 		}
 	public:
 		ParameterList(){};    //default constructor uses pre-defined default params
-		template<typename T3> Parameter<T3>* get_param(const std::string & name){};
-		template<> Parameter<T1>* get_param<T1>(const std::string & name){ return this->dict1[name]; }
-		template<> Parameter<T2>* get_param<T2>(const std::string & name){ return this->dict2[name]; }
+		template<typename T3> Parameter<T3>* get_param(const std::string & name) const {};
+		template<> Parameter<T1>* get_param<T1>(const std::string & name) const { return this->dict1.at(name); }
+		template<> Parameter<T2>* get_param<T2>(const std::string & name) const { return this->dict2.at(name); }
 
 		inline void set_conversion(const std::string & name, const double & val){ this->conversions_phys_to_sim[name] = val; }
-		inline double get_conversion(const std::string & name){ return (this->conversions_phys_to_sim[name]); }
-		inline double* get_conversion_ptr(const std::string & name){ return &(this->conversions_phys_to_sim[name]); }
+		inline double get_conversion(const std::string & name) const { return (this->conversions_phys_to_sim.at(name)); }
+		inline double* get_conversion_ptr(const std::string & name) const { return &(this->conversions_phys_to_sim.at(name)); }
 		virtual void check_and_convert(OptionList<char, bool> *){ this->check_OK(); }
 	};
 

@@ -8,6 +8,8 @@
 #endif
 
 #include <math.h>
+#include <string>
+#include <sstream>
 
 //class for storing and manipulating 3D vectors
 namespace pos
@@ -52,6 +54,13 @@ namespace pos
 			return Position(this->x[1]*pos.x[2] - this->x[2]*pos.x[1],
 				            this->x[2]*pos.x[0] - this->x[0]*pos.x[2],
 							this->x[0]*pos.x[1] - this->x[1]*pos.x[0]);
+		}
+
+		inline std::string toString() const
+		{
+			std::stringstream ss;
+			ss << "(" << this->x[0] << "," << this->x[1] << "," << this->x[2] << ")";
+			return (ss.str());
 		}
 
 		inline void normalise()
