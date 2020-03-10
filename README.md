@@ -15,9 +15,9 @@ In network_3d.h there are three key objects defined:
   
 A guide to each is given below.
 
-1. Node object.
+    1. Node object.
 
-  The node object stores the 3D position of a node in the network (see position.h for a definition of the position object).     
+    The node object stores the 3D position of a node in the network (see position.h for a definition of the position object).     
   
     There are 4 options for constructing a node:
     - Blank constructor: Should be avoided if possible, none of the object variables are initialised.
@@ -25,7 +25,7 @@ A guide to each is given below.
     - Node(const Position & p): position initialised as p.
     - The default copy constructor.
     
-  There is a floating point node property -- Npts -- which is used in some codes, and is set to 1 unless specified otherwise, in which case it is used to codify that the node represents Npts in the same spatial location.
+    There is a floating point node property -- Npts -- which is used in some codes, and is set to 1 unless specified otherwise, in which case it is used to codify that the node represents Npts in the same spatial location.
 
     Functions to access node properties are
     - const Position & get_pos(): returns position for access and copying
@@ -37,9 +37,9 @@ A guide to each is given below.
     - void set_pos(const double & x, const double & y, const double & z): sets node position to (x,y,z)
     - void set_point_count(const double & n): sets Npts to n
  
-2. Edge object.
+    2. Edge object.
 
-  The edge object stores smart pointers (shared_ptr) to two node object, the entry (node_in) and exit (node_out), and the geometric properties of the tube(s) connecting them (in a network::Tube_Geometry object). Note the edge object is a template that takes and argument of the form <NodeType>, which can be network::Node or any class derived from it.
+    The edge object stores smart pointers (shared_ptr) to two node object, the entry (node_in) and exit (node_out), and the geometric properties of the tube(s) connecting them (in a network::Tube_Geometry object). Note the edge object is a template that takes and argument of the form <NodeType>, which can be network::Node or any class derived from it.
   
     Contructors available:
     - Blank: no properties initialised.
@@ -47,10 +47,8 @@ A guide to each is given below.
     - Egde(std::shared_ptr<NodeType> ni, std::shared_ptr<NodeType> no, const double & rad): same as above but radius of tube is initialised as rad.
     - Egde(std::shared_ptr<NodeType> ni, std::shared_ptr<NodeType> no, const double & Nb, const double & rad): Same as above but now edge represents Nb tubes in parallel (stored in Nbranches -- default otherwise is 1).
     - Egde(std::shared_ptr<NodeType> ni, std::shared_ptr<NodeType> no, const double & Nb, const double & rad, const double & orad): Same as above but tube geometry has "outer radius" differs from inner radius.
-
-  To be continued...
     
     Access functions are:
     - 
 
-
+To be continued...
