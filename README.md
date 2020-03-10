@@ -15,7 +15,7 @@ In network_3d.h there are three key objects defined:
   
 A guide to each is given below.
 
-    1. Node object.
+  1. Node object.
 
     The node object stores the 3D position of a node in the network (see position.h for a definition of the position object).     
   
@@ -37,7 +37,7 @@ A guide to each is given below.
     - void set_pos(const double & x, const double & y, const double & z): sets node position to (x,y,z)
     - void set_point_count(const double & n): sets Npts to n
  
-    2. Edge object.
+  2. Edge object.
 
     The edge object stores smart pointers (shared_ptr) to two node object, the entry (node_in) and exit (node_out), and the geometric properties of the tube(s) connecting them (in a network::Tube_Geometry object). Note the edge object is a template that takes and argument of the form <NodeType>, which can be network::Node or any class derived from it.
   
