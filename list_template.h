@@ -27,13 +27,12 @@ namespace inlist
 		void read_file(const std::string &);
 		//parse template function
 		bool parse(const std::string &name, const std::string &nc);
-		inline void add(const std::string & name, const T1 & entry){ this->dict1[name] = entry; }
-		inline void add(const std::string & name, const T2 & entry){ this->dict2[name] = entry; }
-		template<class T3> T3 get(const std::string & name) const { return NULL; }
-		template<> T1 get<T1>(const std::string & name) const { return this->dict1[name]; }
-		template<> T2 get<T2>(const std::string & name) const { return this->dict2[name]; }
+		inline void add(const std::string & name, T1 entry){ this->dict1[name] = entry; }
+		inline void add(const std::string & name, T2 entry){ this->dict2[name] = entry; }
+		void get(const std::string & name, T1 & t) const { t = this->dict1.at(name);}
+		void get(const std::string & name, T2 & t) const { t = this->dict2.at(name);}
 	};
-
+	
 	template<class T1, class T2> 
 	void List<T1,T2>::read_file(const std::string &filename)  //constructer with filename argument
 	{
@@ -41,7 +40,7 @@ namespace inlist
 		unsigned buffsize = 1000;   
 		std::string temp, nc;   //stores parsed info
 		std::stringstream ss;
-	
+		std::cout << "Reading file\n";
 		if (!check_infile(filename))
 		{
 			std::ifstream infile;
@@ -55,6 +54,7 @@ namespace inlist
 				if (temp.size() > 0 && temp[0] != '%')
 				{
 					ss >> std::skipws >> nc;                     //read value into string
+					std::cout << temp << ' ' << nc << std::endl;
 					if (!parse(temp, nc))    //send to parse option
 					{
 						std::cout << "Did not recognise option/parameter " << temp << ".\n";
@@ -142,7 +142,7 @@ namespace inlist
 			possible_values = vectorise(option_list, option_count);
 			value_names = vectorise(option_name_list, option_count);
 		}
-		void read(const std::string & code){};
+		virtual void read(const std::string & code){};
 		std::string get_value_name() const 
 		{
 			for(int i = 0; i < this->possible_values.size(); i++)
@@ -154,26 +154,29 @@ namespace inlist
 	};
 
 	//character option -- for multiple choice options
-	template<> void Option<char>::read(const std::string & code)
+	template<> inline void Option<char>::read(const std::string & code)
 	{
-			bool error = true;
-			for (unsigned i = 0; i < ((unsigned) possible_values.size()); ++i)
+		bool error = true;
+		std::cout << code << std::endl;
+		std::cout << possible_values.size() << std::endl;
+		for (unsigned i = 0; i < ((unsigned) possible_values.size()); ++i)
+		{
+			if(code[0] == possible_values[i])
 			{
-				if(code[0] == possible_values[i]) 
-				{
-					this->value = possible_values[i];
-					error = false;
-				}
+				this->value = possible_values[i];
+				error = false;
 			}
-			if(error)
-			{
-				std::cout << name << " option code " << code << " not recognised\n";
-			}
+		}
+		if(error)
+		{
+			std::cout << name << " option code " << code << " not recognised\n";
+		}
 	}
 
 	//boolian option
-	template<> void Option<bool>::read(const std::string & code)
+	template<> inline void Option<bool>::read(const std::string & code)
 	{
+		std::cout << code << std::endl;
 		switch(code[0])
 		{
 			case 't':
@@ -214,23 +217,43 @@ namespace inlist
 	};
 
 	//integer parameters
-	template<> void Parameter<int>::read(const std::string &c){ value = atoi(c.c_str());}  //this is common to all params of type double
+	template<> inline void Parameter<int>::read(const std::string &c){ value = atoi(c.c_str());}  //this is common to all params of type double
 	
 	//double parameters
-	template<> void Parameter<double>::read(const std::string &c){ value = atof(c.c_str()); }
+	template<> inline void Parameter<double>::read(const std::string &c){ value = atof(c.c_str()); }
 
 	//template for list of two types of options
-	template<typename T1, typename T2> class OptionList: public List<Option<T1>*, Option<T2>*>
+	template<typename T1, typename T2> class OptionList: public List<std::shared_ptr<Option<T1>>,
+	                                                                 std::shared_ptr<Option<T2>>>
 	{
 	protected:
 		std::unordered_map<std::string, std::vector<std::string>> filenames;
 	public:
 
 		OptionList(){};   //default constructor is blank
-		template<typename T3> Option<T3>* get_option(const std::string & name) const {};
-		template<> Option<T1>* get_option<T1>(const std::string & name) const { return this->dict1.at(name); }
-		template<> Option<T2>* get_option<T2>(const std::string & name) const { return this->dict2.at(name); }
-
+		template<typename T3> T3 get_option_value(const std::string & name) const
+		{
+			T3 o;
+			if(typeid(T3) == typeid(T1) || typeid(T3) == typeid(T2))
+			{
+				this->get_option_value(name, o);
+			}
+			else
+			{
+				std::cerr << "Error: option type not recognised." << std::endl;
+			}
+			return o;
+			
+		}
+		void get_option_value(const std::string & name, T1 & o) const { o = this->dict1.at(name)->get_value(); }
+		void get_option_value(const std::string & name, T2 & o) const { o = this->dict2.at(name)->get_value(); }
+		std::string get_option_name(const std::string & name) const
+		{
+			if(this->dict1.find(name) != this->dict1.end())  this->dict1.at(name)->get_value_name();
+			if(this->dict2.find(name) != this->dict2.end())  this->dict2.at(name)->get_value_name();
+			return "";
+		}
+		
 		inline void add_filename(const std::string & code, const std::string & fname)
 		{ 
 			if(!this->filename_exists(code)) this->filenames[code] = std::vector<std::string>(); 
@@ -274,7 +297,8 @@ namespace inlist
 	}
 
 	//template for two types of parameters
-	template<typename T1, typename T2> class ParameterList: public List<Parameter<T1>*, Parameter<T2>*>
+	template<typename T1, typename T2> class ParameterList: public List<std::shared_ptr<Parameter<T1>>,
+	                                                                    std::shared_ptr<Parameter<T2>>>
 	{
 	protected:
 		std::unordered_map<std::string, double> conversions_phys_to_sim;
@@ -291,10 +315,36 @@ namespace inlist
 		}
 	public:
 		ParameterList(){};    //default constructor uses pre-defined default params
-		template<typename T3> Parameter<T3>* get_param(const std::string & name) const {};
-		template<> Parameter<T1>* get_param<T1>(const std::string & name) const { return this->dict1.at(name); }
-		template<> Parameter<T2>* get_param<T2>(const std::string & name) const { return this->dict2.at(name); }
-
+		template<typename T3> T3 get_param_value(const std::string & name) const
+		{
+			T3 p;
+			if(typeid(T3) == typeid(T1) || typeid(T3) == typeid(T2))
+			{
+				this->get_param_value(name, p);
+			}
+			else
+			{
+				std::cerr << "Error: param type not recognised." << std::endl;
+			}
+			return p;
+		}
+		void get_param_value(const std::string & name, T1 & p) const { p = this->dict1.at(name)->get_value(); }
+		void get_param_value(const std::string & name, T2 & p) const { p = this->dict2.at(name)->get_value(); }
+		void set_param_phys_value(const std::string & name, const T1 & p)
+		{
+			if(this->dict1.find(name) != this->dict1.end())  this->dict1[name]->set_phys_value(p);
+		}
+		void set_param_phys_value(const std::string & name, const T2 & p)
+		{
+			if(this->dict2.find(name) != this->dict2.end())  this->dict2[name]->set_phys_value(p);
+		}
+		void set_param_to_default(const std::string & name)
+		{
+			if(this->dict1.find(name) != this->dict1.end())  this->dict1[name]->set_to_default();
+			if(this->dict2.find(name) != this->dict2.end())  this->dict2[name]->set_to_default();
+		}
+		
+		
 		inline void set_conversion(const std::string & name, const double & val){ this->conversions_phys_to_sim[name] = val; }
 		inline double get_conversion(const std::string & name) const { return (this->conversions_phys_to_sim.at(name)); }
 		inline double* get_conversion_ptr(const std::string & name) const { return &(this->conversions_phys_to_sim.at(name)); }

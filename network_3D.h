@@ -48,7 +48,7 @@ namespace network
 	public:
 		//-------Member functions-------//
 		TubeGeometry(){};
-		TubeGeometry::TubeGeometry(const double & rad, const double & len)
+		TubeGeometry(const double & rad, const double & len)
 		{
 			radius = rad;
 			length = len;
@@ -58,7 +58,7 @@ namespace network
 			o_area = area_calc(outer_radius);
 			o_vol = vol_calc(o_area, length);
 		}
-		TubeGeometry::TubeGeometry(const double & rad, const double & len, const double & o_rad)
+		TubeGeometry(const double & rad, const double & len, const double & o_rad)
 		{
 			radius = rad;
 			length = len;
@@ -247,8 +247,14 @@ namespace network
 			this->update_node_edge_maps();
 			if(this->reorder_network()) abort_on_failure();   //returns 1 on error
 		}
-		int reorder_network( std::vector<size_t> & old_node_indices_to_new = std::vector<size_t>(), 
-			                 std::vector<size_t> & old_edge_indices_to_new = std::vector<size_t> () );
+		int reorder_network( std::vector<size_t> & old_node_indices_to_new,
+			                 std::vector<size_t> & old_edge_indices_to_new);
+		int reorder_network()
+		{
+			std::vector<size_t> a = std::vector<size_t>();
+			std::vector<size_t> b = std::vector<size_t>();
+			return this->reorder_network(a,b);
+		}
 		void update_node_edge_maps();
 	public:
 		//constructors
@@ -293,7 +299,7 @@ namespace network
 			}
 			else
 			{
-				std::cerr << "Node does not exist." << endl;
+				std::cerr << "Node does not exist." << std::endl;
 				return 0;
 			}
 		}
@@ -301,11 +307,11 @@ namespace network
 		{
 			if(this->edge_exists(e))
 			{
-				return (this->edge_index_map.at(n)); 
+				return (this->edge_index_map.at(e)); 
 			}
 			else
 			{
-				std::cerr << "Edge does not exist." << endl;
+				std::cerr << "Edge does not exist." << std::endl;
 				return 0;
 			}
 		}
