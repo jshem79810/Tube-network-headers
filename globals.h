@@ -37,5 +37,4 @@ std::vector<T> vectorise(const T * value_array, const int & N)    //turn c array
 }
 
 
-
 #endif

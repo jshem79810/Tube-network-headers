@@ -6,6 +6,7 @@
 #include <fstream>
 #include <sstream>
 #include <unordered_map>
+#include <memory>
 #include "file_manip.h"
 #include "globals.h"
 
@@ -51,7 +52,7 @@ namespace inlist
 				infile.getline(buff, buffsize);             //read line from file
 				ss.str(buff);
 				temp.clear();
-				ss >> std::skipws >> temp;                //parse line
+				ss >> std::skipws >> temp;                //( line
 				if (temp.size() > 0 && temp[0] != '%')
 				{
 					ss >> std::skipws >> nc;                     //read value into string
@@ -220,7 +221,7 @@ namespace inlist
 	template<> void Parameter<double>::read(const std::string &c){ value = atof(c.c_str()); }
 
 	//template for list of two types of options
-	template<typename T1, typename T2> class OptionList: public List<Option<T1>*, Option<T2>*>
+	template<typename T1, typename T2> class OptionList: public List<std::shared_ptr<Option<T1>>, std::shared_ptr<Option<T2>>>
 	{
 	protected:
 		std::unordered_map<std::string, std::vector<std::string>> filenames;
@@ -228,8 +229,8 @@ namespace inlist
 
 		OptionList(){};   //default constructor is blank
 		template<typename T3> Option<T3>* get_option(const std::string & name) const {};
-		template<> Option<T1>* get_option<T1>(const std::string & name) const { return this->dict1.at(name); }
-		template<> Option<T2>* get_option<T2>(const std::string & name) const { return this->dict2.at(name); }
+		template<> Option<T1>* get_option<T1>(const std::string & name) const { return this->dict1.at(name).get(); }
+		template<> Option<T2>* get_option<T2>(const std::string & name) const { return this->dict2.at(name).get(); }
 
 		inline void add_filename(const std::string & code, const std::string & fname)
 		{ 
@@ -244,6 +245,12 @@ namespace inlist
 		}
 		inline std::string get_filename(const std::string & code, const size_t & n) const { return this->filenames.at(code)[n]; }
 		inline bool filename_exists(const std::string & code) const { return (this->filenames.find(code) != this->filenames.end()); }
+		inline bool option_exists(const std::string & name) const 
+		{ 
+			if(this->dict1.find(name) != this->dict1.end()) return true;
+			if(this->dict2.find(name) != this->dict2.end()) return true;
+			return false;
+		}
 		void get_filenames_from_args(const std::vector<std::string> & extensions, const int &argc, char** argv);
 	};
 
@@ -274,7 +281,7 @@ namespace inlist
 	}
 
 	//template for two types of parameters
-	template<typename T1, typename T2> class ParameterList: public List<Parameter<T1>*, Parameter<T2>*>
+	template<typename T1, typename T2> class ParameterList: public List<std::shared_ptr<Parameter<T1>>, std::shared_ptr<Parameter<T2>>>
 	{
 	protected:
 		std::unordered_map<std::string, double> conversions_phys_to_sim;
@@ -292,12 +299,18 @@ namespace inlist
 	public:
 		ParameterList(){};    //default constructor uses pre-defined default params
 		template<typename T3> Parameter<T3>* get_param(const std::string & name) const {};
-		template<> Parameter<T1>* get_param<T1>(const std::string & name) const { return this->dict1.at(name); }
-		template<> Parameter<T2>* get_param<T2>(const std::string & name) const { return this->dict2.at(name); }
+		template<> Parameter<T1>* get_param<T1>(const std::string & name) const { return this->dict1.at(name).get(); }
+		template<> Parameter<T2>* get_param<T2>(const std::string & name) const { return this->dict2.at(name).get(); }
 
 		inline void set_conversion(const std::string & name, const double & val){ this->conversions_phys_to_sim[name] = val; }
 		inline double get_conversion(const std::string & name) const { return (this->conversions_phys_to_sim.at(name)); }
-		inline double* get_conversion_ptr(const std::string & name) const { return &(this->conversions_phys_to_sim.at(name)); }
+		inline double* get_conversion_ptr(const std::string & name){ return &(this->conversions_phys_to_sim.at(name)); }
+		inline bool param_exists(const std::string & name) const 
+		{ 
+			if(this->dict1.find(name) != this->dict1.end()) return true;
+			if(this->dict2.find(name) != this->dict2.end()) return true;
+			return false;
+		}
 		virtual void check_and_convert(OptionList<char, bool> *){ this->check_OK(); }
 	};
 

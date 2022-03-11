@@ -1,6 +1,8 @@
 #ifndef NETWORK_3D_H
 #define NETWORK_3D_H
 
+/*This header file defines basic node, edge, and network objects*/
+
 #if defined(_WIN32) || defined(_WIN64)
 	#ifndef _USE_MATH_DEFINES
 		#define _USE_MATH_DEFINES
@@ -100,16 +102,14 @@ namespace network
 		}
 	protected:
 		//-------Member variables-------//
-		Position pos; //, *network_pos;
+		Position pos;
 		double Npts;
 	public:
 		//-------Member functions-------//
 		Node(){};
 		Node(const double &x, const double &y, const double &z)
 		{
-			pos.x[0] = x;
-			pos.x[1] = y;
-			pos.x[2] = z;
+			this->set_pos(x,y,z);
 			this->initialise();
 		}
 		Node(const Position & p)
@@ -118,10 +118,16 @@ namespace network
 			this->initialise();
 		}
 
-		inline Position get_pos() const { return (this->pos); }
+		inline const Position & get_pos() const { return (this->pos); }
 		inline double get_pos(const int & p) const { return (this->pos.x[p]); }
 		inline double point_count() const { return (this->Npts); }
 
+		inline void set_pos(const double &x, const double &y, const double &z)
+		{ 
+			this->pos.x[0] = x;
+			this->pos.x[1] = y;
+			this->pos.x[2] = z;
+		}
 		inline void set_pos(const Position & p){ this->pos = p; }
 		inline void set_point_count(const double & p){ this->Npts = p; }
 
@@ -183,10 +189,10 @@ namespace network
 		~Edge(){};
 
 
-		inline std::shared_ptr<NodeType> get_node_in() const { return (this->node_in); }
-		inline std::shared_ptr<NodeType> get_node_out() const { return (this->node_out); }
+		inline NodeType* get_node_in() const { return (this->node_in.get()); }
+		inline NodeType* get_node_out() const { return (this->node_out.get()); }
 		inline double branch_count() const { return (this->Nbranches); }
-		inline const std::shared_ptr<TubeGeometry> get_geom() const { return this->geom; }
+		inline TubeGeometry* get_geom() const { return this->geom.get(); }
 
 		virtual double get_inner_volume() const { return ((this->Nbranches)*(this->geom->inner_volume())); }
 		virtual double get_outer_volume() const { return ((this->Nbranches)*(this->geom->outer_volume())); }
@@ -235,12 +241,14 @@ namespace network
 		std::unordered_map<EdgeType*, size_t> edge_index_map;
 
 		//for navigating
-		size_t term_start;
+		size_t internal_start, term_start;
 		std::vector<std::vector<size_t>> edge_in_indices,  edge_out_indices;
 		std::vector<std::vector<size_t>> edges_sorted_by_horsfield, edges_sorted_by_weibel;
 		std::vector<size_t> node_in_indices, node_out_indices;
 		std::vector<size_t> edge_horsfield_order, edge_weibel_order;
 
+		//identifier
+		bool is_tree;
 		int copy_tree_vals(Network<NodeType,EdgeType> *);
 		inline void setup()
 		{
@@ -252,17 +260,22 @@ namespace network
 		void update_node_edge_maps();
 	public:
 		//constructors
-		Network(){};
-		Network(const std::vector<std::shared_ptr<NodeType>> &node, 
-			    const std::vector<std::shared_ptr<EdgeType>> &edge)
+		Network(const bool & tree = true)
 		{
+			this->is_tree = tree;
+		}
+		Network(const std::vector<std::shared_ptr<NodeType>> &node, 
+			    const std::vector<std::shared_ptr<EdgeType>> &edge, const bool & tree = true)
+		{
+			this->is_tree = tree;
 			this->NodeVec = node;
 			this->EdgeVec = edge;
 			this->setup();
 		}
 		Network(const std::map<long int, std::shared_ptr<NodeType>> &node, 
-			    const std::map<long int, std::shared_ptr<EdgeType>> &edge);
-		Network(const std::string & node_fname, const std::string & edge_fname, const std::string & term_fname, const double & l_scale);
+			    const std::map<long int, std::shared_ptr<EdgeType>> &edge, const bool & tree = true);
+		Network(const std::string & node_fname, const std::string & edge_fname, 
+			    const std::string & term_fname, const double & l_scale, const bool & tree = true);
 
 		//void build_network_matrices();
 		void calc_edge_orders();
@@ -277,6 +290,7 @@ namespace network
 		inline size_t get_first_term_index() const { return (this->term_start); }
 		inline size_t count_nodes() const { return (this->NodeVec.size()); }
 		inline size_t count_term_nodes() const { return (this->NodeVec.size() - term_start); }
+		inline size_t count_inlet_nodes() const { return (this->internal_start); }
 		inline size_t count_edges() const { return (this->EdgeVec.size()); }
 		inline size_t count_weibel_orders() const { return (this->edges_sorted_by_weibel.size()); }
 		inline size_t count_horsfield_orders() const { return (this->edges_sorted_by_horsfield.size()); }
@@ -293,7 +307,7 @@ namespace network
 			}
 			else
 			{
-				std::cerr << "Node does not exist." << endl;
+				std::cerr << "Node does not exist." << std::endl;
 				return 0;
 			}
 		}
@@ -305,13 +319,15 @@ namespace network
 			}
 			else
 			{
-				std::cerr << "Edge does not exist." << endl;
+				std::cerr << "Edge does not exist." << std::endl;
 				return 0;
 			}
 		}
-		inline std::shared_ptr<NodeType> get_node(const size_t & k) const { return (this->NodeVec[k]); }
-		inline std::shared_ptr<EdgeType> get_edge(const size_t & j) const { return (this->EdgeVec[j]); }
-		inline std::shared_ptr<NodeType> get_entry_node() const { return (this->NodeVec[0]); }
+		inline NodeType* get_node(const size_t & k) const { return (this->NodeVec[k].get()); }
+		inline EdgeType* get_edge(const size_t & j) const { return (this->EdgeVec[j].get()); }
+		inline std::shared_ptr<NodeType> get_node_smart_ptr(const size_t & k) const { return (this->NodeVec[k]); }
+		inline std::shared_ptr<EdgeType> get_edge_smart_ptr(const size_t & j) const { return (this->EdgeVec[j]); }
+		inline NodeType* get_entry_node() const { return (this->NodeVec[0].get()); }
 		inline size_t get_edge_in_index(const size_t & node_no, const size_t & count) const { return (this->edge_in_indices[node_no][count]); }
 		inline size_t get_edge_out_index(const size_t & node_no, const size_t & count) const { return (this->edge_out_indices[node_no][count]); }
 		inline size_t get_edge_index_from_weibel_order(const size_t & wo, const size_t & jo) const { return (this->edges_sorted_by_weibel[wo][jo]); }
@@ -320,6 +336,14 @@ namespace network
 		inline size_t get_node_out_index(const size_t & edge_no) const { return (this->node_out_indices[edge_no]); }
 		inline size_t get_horsfield_order(const size_t & edge_no) const { return (this->edge_horsfield_order[edge_no]); }
 		inline size_t get_weibel_order(const size_t & edge_no) const { return (this->edge_weibel_order[edge_no]); }
+		inline Position get_edge_direction(const size_t & edge_no) const
+		{
+			Position dir = this->NodeVec[this->node_out_indices[edge_no]]->get_pos()
+				       - this->NodeVec[this->node_in_indices[edge_no]]->get_pos();
+			dir.normalise();
+			return dir;
+		}
+
 		inline const std::vector<double>& get_extra_node_inputs(const char & arg, NodeType *n)
 		{
 			auto input_it = this->extra_node_inputs.find(arg);
@@ -383,6 +407,17 @@ namespace network
 		{ 
 			return (this->edge_index_map.find(n) != this->edge_index_map.end()); 
 		}
+		inline bool is_terminal(const size_t & k) const
+		{
+			if(k >= this->term_start && k < this->count_nodes())
+			{
+				return true;
+			}
+			else
+			{
+				return false;
+			}
+		}
 
 		void remove_nodes(std::vector<std::size_t> & node_indices);
 		void remove_edges(std::vector<std::size_t> & edge_indices);
@@ -394,8 +429,9 @@ namespace network
 	//constructor from input files
 	template<class NodeType, class EdgeType> Network<NodeType,EdgeType>::
 		Network(const std::string & node_fname, const std::string & edge_fname,
-				const std::string & term_fname, const double & l_scale)
+				const std::string & term_fname, const double & l_scale, const bool & tree)
 	{
+		this->is_tree = tree;      //if it is a tree, we caculate some tree specific properties
 		std::map<long int,std::shared_ptr<NodeType>> node;     //stores indexed list of nodes -- from file
 		std::map<long int,std::shared_ptr<EdgeType>> edge;     //stores indexed list of edges
 
@@ -618,8 +654,9 @@ namespace network
 	//template constructor from maps
 	template<class NodeType, class EdgeType> Network<NodeType,EdgeType>::Network
 		                (const std::map<long int, std::shared_ptr<NodeType>> &node, 
-						 const std::map<long int, std::shared_ptr<EdgeType>> &edge)
+						 const std::map<long int, std::shared_ptr<EdgeType>> &edge, const bool &tree)
 	{
+		this->is_tree = tree;
 		this->initialise_from_maps(node,edge);
 	}
 
@@ -646,14 +683,14 @@ namespace network
 	{
 		if(this->EdgeVec.size() > 0)
 		{
-			size_t count_entrance_nodes = 0;
-			size_t trachea_node_index;
+			std::vector<size_t> trachea_node_index;
+			trachea_node_index.reserve(1);
 			//for storing indices
 			std::vector<size_t> trachea_edge_indices, term_node_indices, all_other_node_indices, term_edge_indices, all_other_edge_indices;
 			term_node_indices.reserve(this->NodeVec.size()-1);
 			all_other_node_indices.reserve(this->NodeVec.size()-1);
 			term_edge_indices.reserve(this->EdgeVec.size()-1);
-			all_other_edge_indices.reserve(this->EdgeVec.size()-1);
+			//all_other_edge_indices.reserve(this->EdgeVec.size()-1);
 			old_node_indices_to_new.resize(this->NodeVec.size());
 			old_edge_indices_to_new.resize(this->EdgeVec.size());
 
@@ -661,16 +698,17 @@ namespace network
 			{
 				if(this->count_edges_in(k) == 0)    //tracheal node
 				{
-					trachea_node_index = k;
-					trachea_edge_indices = this->edge_out_indices[k];
-					count_entrance_nodes++;
+					trachea_node_index.push_back(k);
+					trachea_edge_indices.insert(trachea_edge_indices.end(), this->edge_out_indices[k].begin(),
+						                      this->edge_out_indices[k].end());
 				}
 				else
 				{
 					if(this->count_edges_out(k) == 0)    //terminal node, goes at end
 					{
 						term_node_indices.push_back(k);
-						term_edge_indices.insert(term_edge_indices.end(), this->edge_in_indices[k].begin(), this->edge_in_indices[k].end());
+						term_edge_indices.insert(term_edge_indices.end(), this->edge_in_indices[k].begin(), 
+												this->edge_in_indices[k].end());
 					}
 					else    //all other nodes put at start
 					{
@@ -678,6 +716,7 @@ namespace network
 						all_other_node_indices.push_back(k);
 						for(size_t ni=0; ni<this->edge_in_indices[k].size(); ni++)
 						{
+							//check its not an entrance edge
 							if(this->count_edges_in(this->get_node_in_index(this->get_edge_in_index(k,ni))) > 0)   //add to all other edge indices if not trach edge
 							{
 								all_other_edge_indices.push_back(this->get_edge_in_index(k,ni));
@@ -688,15 +727,18 @@ namespace network
 			}
 
 			//check network is valid
-			if(count_entrance_nodes == 0)
+			if(is_tree)
 			{
-				std::cout << "Error, no entrance node.\n";
-				return 1;
-			}
-			if(count_entrance_nodes > 1)
-			{
-				std::cout << "Error, more than one entrance node.\n";
-				return 1;
+				if(trachea_node_index.size() == 0)
+				{
+					std::cout << "Error, no entrance node.\n";
+					return 1;
+				}
+				if(trachea_node_index.size() > 1)
+				{
+					std::cout << "Error, more than one entrance node.\n";
+					return 1;
+				}
 			}
 
 			//copy old list of nodes and edges
@@ -709,9 +751,13 @@ namespace network
 			this->EdgeVec.resize(old_edge_vec.size());
 
 			//re-fill node vector -- trachea, then intermediate, then terminal
-			this->NodeVec[0] = old_node_vec[trachea_node_index];
-			old_node_indices_to_new[trachea_node_index] = 0;
-			size_t count = 1;
+			this->internal_start = trachea_node_index.size();
+			for(int k = 0; k < this->internal_start; k++)
+			{
+				this->NodeVec[k] = old_node_vec[trachea_node_index[k]];
+				old_node_indices_to_new[trachea_node_index[k]] = k;
+			}
+			size_t count = this->internal_start;
 			for(size_t ni = 0; ni < all_other_node_indices.size(); ni++)
 			{
 				this->NodeVec[ni + count] = old_node_vec[all_other_node_indices[ni]];
@@ -726,13 +772,12 @@ namespace network
 			}
 
 			//re-fill edge vector -- trachea, then intermediate, then terminal
-			count = 0;
 			for(size_t j0 = 0; j0 < trachea_edge_indices.size(); j0++)
 			{
 				this->EdgeVec[j0] = old_edge_vec[trachea_edge_indices[j0]];
 				old_edge_indices_to_new[trachea_edge_indices[j0]] = j0;
-				count++;
 			}
+			count = trachea_edge_indices.size();
 			for(size_t ji = 0; ji < all_other_edge_indices.size(); ji++)
 			{
 				this->EdgeVec[ji + count] = old_edge_vec[all_other_edge_indices[ji]];
@@ -746,7 +791,10 @@ namespace network
 			}
 
 			this->update_node_edge_maps();
-			this->calc_edge_orders();
+			if(is_tree)
+			{
+				this->calc_edge_orders();
+			}
 		}
 
 		return 0;
@@ -862,7 +910,7 @@ namespace network
 		this->node_index_map.clear();
 		for(size_t k = 0; k < this->NodeVec.size(); k++)
 		{
-			this->node_index_map[this->get_node(k).get()] = k;
+			this->node_index_map[this->get_node(k)] = k;
 		}
 
 		this->edge_index_map.clear();    //clear edge index map
@@ -883,8 +931,8 @@ namespace network
 		{
 			this->edge_index_map[this->EdgeVec[j].get()] = j;   //map from edge to index
 
-			this->node_in_indices[j] = this->node_index_map[this->EdgeVec[j]->get_node_in().get()];       //map j to node in index
-			this->node_out_indices[j] = this->node_index_map[this->EdgeVec[j]->get_node_out().get()];    //map j to node out index
+			this->node_in_indices[j] = this->node_index_map[this->EdgeVec[j]->get_node_in()];       //map j to node in index
+			this->node_out_indices[j] = this->node_index_map[this->EdgeVec[j]->get_node_out()];    //map j to node out index
 
 			this->edge_in_indices[this->node_out_indices[j]].push_back(j);      //map node out index to j
 			this->edge_out_indices[this->node_in_indices[j]].push_back(j);      //map node in index to j
@@ -1155,11 +1203,11 @@ namespace network
 		{
 			for(size_t k = 0; k < this->count_nodes(); k++)
 			{
-				this->get_node(k)->copy_all_vals(tree_in->get_node(k).get());
+				this->get_node(k)->copy_all_vals(tree_in->get_node(k));
 			}
 			for(size_t j = 0; j < this->count_edges(); j++)
 			{
-				this->get_edge(j)->copy_all_vals(tree_in->get_edge(j).get());
+				this->get_edge(j)->copy_all_vals(tree_in->get_edge(j));
 			}
 
 			return 0;
