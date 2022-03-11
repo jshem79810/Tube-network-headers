@@ -122,6 +122,8 @@ namespace inlist
 	protected:
 		std::vector<T> possible_values;
 		std::vector<std::string> value_names;
+        void read_char(const std::string & code);
+        void read_bool(const std::string & code);
 	public:
 		std::string print() const 
 		{
@@ -143,7 +145,19 @@ namespace inlist
 			possible_values = vectorise(option_list, option_count);
 			value_names = vectorise(option_name_list, option_count);
 		}
-		void read(const std::string & code){};
+
+		void read(const std::string & code){
+            if (typeid(T) == typeid(char))
+            {
+                this->read_char(code);
+            }
+            if (typeid(T) == typeid(bool))
+            {
+                this->read_bool(code);
+            }
+        };
+        //character option -- for multiple choice options
+
 		std::string get_value_name() const 
 		{
 			for(int i = 0; i < this->possible_values.size(); i++)
@@ -154,56 +168,66 @@ namespace inlist
 		}
 	};
 
-	//character option -- for multiple choice options
-	template<> void Option<char>::read(const std::string & code)
-	{
-			bool error = true;
-			for (unsigned i = 0; i < ((unsigned) possible_values.size()); ++i)
-			{
-				if(code[0] == possible_values[i]) 
-				{
-					this->value = possible_values[i];
-					error = false;
-				}
-			}
-			if(error)
-			{
-				std::cout << name << " option code " << code << " not recognised\n";
-			}
-	}
+    template <typename T>
+    void Option<T>::read_char(const std::string &code)
+    {
+        bool error = true;
+        for (unsigned i = 0; i < ((unsigned) possible_values.size()); ++i) {
+            if (code[0] == possible_values[i]) {
+                this->value = possible_values[i];
+                error = false;
+            }
+        }
+        if (error) {
+            std::cout << this->name << " option code " << code << " not recognised\n";
+        }
+    }
+    //boolian option
+    template <typename T>
+    void Option<T>::read_bool(const std::string &code)
+    {
+        switch(code[0])
+        {
+            case 't':
+            case 'T':
+            {
+                this->value = true;
+            } break;
 
-	//boolian option
-	template<> void Option<bool>::read(const std::string & code)
-	{
-		switch(code[0])
-		{
-			case 't':
-			case 'T':
-			{
-				this->value = true;
-			} break;
-		
-			case 'f':
-			case 'F':
-			{
-				this->value = false;
-			} break;
-		
-			default:
-			{
-				std::cout << name << " option code " << code << " not recognised\n";
-			}
-		}
-	}
+            case 'f':
+            case 'F':
+            {
+                this->value = false;
+            } break;
+
+            default:
+            {
+                std::cout << this->name << " option code " << code << " not recognised\n";
+            }
+        }
+    }
 
 	//parameter -- for storing values that may have physical units
 	template <typename T>
 	class Parameter: public Input<T>
 	{
+    protected:
+        void read_int(const std::string & code);
+        void read_double(const std::string & code);
 	public:
 		Parameter<T>():Input<T>(){};
 		Parameter(const T & val, const std::string & nam):Input<T>(val, nam){};
-		virtual void read(const std::string & code){};
+		virtual void read(const std::string & code)
+        {
+            if (typeid(T) == typeid(int))
+            {
+                this->read_int(code);
+            }
+            if (typeid(T) == typeid(double))
+            {
+                this->read_double(code);
+            }
+        }
 
 		virtual void set_conversion( T * ){};
 		virtual bool isOK() const { return true; }
@@ -215,10 +239,16 @@ namespace inlist
 	};
 
 	//integer parameters
-	template<> void Parameter<int>::read(const std::string &c){ value = atoi(c.c_str());}  //this is common to all params of type double
+	template<typename T> void Parameter<T>::read_int(const std::string &c)
+	{
+        this->value = atoi(c.c_str());
+    }  //this is common to all params of type double
 	
 	//double parameters
-	template<> void Parameter<double>::read(const std::string &c){ value = atof(c.c_str()); }
+	template<typename T> void Parameter<T>::read_double(const std::string &c)
+	{
+        this->value = atof(c.c_str());
+    }
 
 	//template for list of two types of options
 	template<typename T1, typename T2> class OptionList: public List<std::shared_ptr<Option<T1>>, std::shared_ptr<Option<T2>>>
